@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suffering Adjusted Days System - Welfare Footprint Estimator</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.css">
+<style>
+  :root {
+    --green:  #2e7d32;
+    --amber:  #f57f17;
+    --orange: #e65100;
+    --red:    #b71c1c;
+    --green-bg:  #e8f5e9;
+    --amber-bg:  #fff8e1;
+    --orange-bg: #fff3e0;
+    --red-bg:    #ffebee;
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(0,0,0,.12);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; font-size: 14px; background: #f5f5f5; color: #222; }
+  h1 { font-size: 1.6rem; }
+  h2 { font-size: 1.1rem; font-weight: 600; margin-bottom: 12px; color: #444; }
+  h3 { font-size: .95rem; font-weight: 600; }
+  .container { max-width: 960px; margin: 0 auto; padding: 20px 16px 60px; }
+
+  /* Header */
+  .header { background: #801C31; color: #fff; padding: 20px 24px; border-radius: var(--radius); margin-bottom: 20px; }
+  .header p { opacity: .82; font-size: .9rem; margin-top: 6px; }
+
+  /* Cards / sections */
+  .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; margin-bottom: 16px; }
+
+  /* Grid helpers */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+  @media(max-width:600px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
+  /* Form elements */
+  label { display: block; font-size: .8rem; font-weight: 600; color: #555; margin-bottom: 4px; }
+  input[type=text], input[type=number], textarea {
+    width: 100%; padding: 7px 10px; border: 1px solid #ccc; border-radius: 6px; font-size: .9rem;
+    background: #fafafa;
+  }
+  input[type=number] { -moz-appearance: textfield; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+  textarea { resize: vertical; min-height: 56px; font-family: inherit; }
+  .field { margin-bottom: 10px; }
+
+  /* Slider meta */
+  .slider-meta { display: flex; justify-content: space-between; font-size: .75rem; color: #888; margin-top: 4px; }
+  .slider-wrap { margin: 14px 0 4px; }
+
+  /* Pain cards */
+  .pain-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:600px) { .pain-grid { grid-template-columns: 1fr; } }
+  .pain-card { border-radius: var(--radius); padding: 16px; }
+  .pain-card.annoying    { background: var(--green-bg);  border-left: 4px solid var(--green);  }
+  .pain-card.hurtful     { background: var(--amber-bg);  border-left: 4px solid var(--amber);  }
+  .pain-card.disabling   { background: var(--orange-bg); border-left: 4px solid var(--orange); }
+  .pain-card.excruciating{ background: var(--red-bg);    border-left: 4px solid var(--red);    }
+  .pain-card h3 { margin-bottom: 12px; }
+  .pain-card.annoying     h3 { color: var(--green);  }
+  .pain-card.hurtful      h3 { color: var(--amber);  }
+  .pain-card.disabling    h3 { color: var(--orange); }
+  .pain-card.excruciating h3 { color: var(--red);    }
+
+  /* Handle value labels */
+  .handle-labels { display: flex; justify-content: space-between; margin-top: 6px; font-size: .72rem; color: #666; }
+
+  /* noUiSlider overrides */
+  .noUi-connect { background: #888; }
+  .pain-card.annoying     .noUi-connect { background: var(--green);  }
+  .pain-card.hurtful      .noUi-connect { background: var(--amber);  }
+  .pain-card.disabling    .noUi-connect { background: var(--orange); }
+  .pain-card.excruciating .noUi-connect { background: var(--red);    }
+  .noUi-handle { width: 18px !important; height: 18px !important; top: -5px !important; border-radius: 50% !important; }
+  .noUi-horizontal { height: 8px; }
+
+  /* Chart */
+  .chart-wrap { margin-top: 12px; height: 80px; }
+
+  /* Computed preview */
+  .computed-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  @media(max-width:600px) { .computed-grid { grid-template-columns: 1fr 1fr; } }
+  .computed-item { background: #f9f9f9; border-radius: 6px; padding: 10px; text-align: center; border: 1px solid #e0e0e0; }
+  .computed-item .val { font-size: 1.1rem; font-weight: 700; color: #1a237e; }
+  .computed-item .lbl { font-size: .72rem; color: #888; margin-top: 2px; }
+
+  /* Buttons */
+  .btn { display: inline-block; padding: 9px 18px; border: none; border-radius: 6px; cursor: pointer; font-size: .88rem; font-weight: 600; transition: opacity .15s; }
+  .btn:hover { opacity: .85; }
+  .btn-primary   { background: #1a237e; color: #fff; }
+  .btn-success   { background: #2e7d32; color: #fff; }
+  .btn-secondary { background: #eee; color: #333; }
+  .btn-danger    { background: #b71c1c; color: #fff; padding: 4px 10px; font-size: .78rem; }
+  .btn-edit      { background: #e3f2fd; color: #0d47a1; padding: 4px 10px; font-size: .78rem; border: 1px solid #90caf9; }
+  .actions { display: flex; gap: 10px; margin-top: 16px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  th { background: #1a237e; color: #fff; padding: 8px 10px; text-align: left; white-space: nowrap; }
+  td { padding: 7px 10px; border-bottom: 1px solid #eee; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fafafa; }
+  .empty-msg { text-align: center; color: #aaa; padding: 20px; }
+
+  /* Notice */
+  .notice { background: #e8eaf6; border-left: 4px solid #3949ab; padding: 10px 14px; border-radius: 4px; font-size: .82rem; color: #333; margin-bottom: 16px; }
+
+  /* Edit mode banner */
+  #edit-banner { display: none; background: #fff9c4; border: 1px solid #f9a825; border-radius: 6px; padding: 8px 14px; margin-bottom: 12px; font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>Welfare Footprint Estimator</h1>
+    <p>Enter probability estimates for a welfare footprint analysis. Each submission creates one row in the output CSV.</p>
+  </div>
+
+  <div class="notice">
+    Observations are saved in your browser (localStorage) and survive page refreshes. Click <strong>Download CSV</strong> when ready.
+  </div>
+
+  <div id="edit-banner">
+    &#9998; <strong>Editing row <span id="edit-row-num"></span>.</strong> Update values and click <em>Add Observation</em> to save changes.
+  </div>
+
+  <!-- Section 1: Metadata -->
+  <div class="card">
+    <h2>Observation Metadata</h2>
+    <div class="grid-2">
+      <div class="field">
+        <label for="f-issue">Issue</label>
+        <input type="text" id="f-issue" placeholder="e.g. Broiler leg disorders">
+      </div>
+      <div class="field">
+        <label for="f-estimator">Estimator name</label>
+        <input type="text" id="f-estimator" placeholder="Your name or initials">
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="field">
+        <label>Mortality (0–1)</label>
+        <div class="slider-wrap" id="sl-mortality"></div>
+        <div class="slider-meta"><span>0</span><span id="lbl-mortality">0.50</span><span>1</span></div>
+      </div>
+      <div class="field">
+        <label for="f-slaughter">Slaughter time (days)</label>
+        <input type="number" id="f-slaughter" placeholder="e.g. 42" min="0" step="1">
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 2: Pain probabilities -->
+  <div class="card">
+    <h2>Pain Probabilities</h2>
+    <p style="font-size:.82rem;color:#666;margin-bottom:14px">Each slider has three handles: 5th percentile | Median | 95th percentile. Drag handles; they cannot cross.</p>
+    <div class="pain-grid" id="pain-grid">
+      <!-- Injected by JS -->
+    </div>
+  </div>
+
+  <!-- Section 3: Duration & Prevalence -->
+  <div class="card">
+    <h2>Duration &amp; Prevalence</h2>
+    <div class="grid-3">
+      <div class="field">
+        <label for="f-abs-days">Absolute days (abs_days)</label>
+        <input type="number" id="f-abs-days" placeholder="e.g. 10" min="0" step="any">
+      </div>
+      <div class="field">
+        <label>Prevalence (0–1)</label>
+        <div class="slider-wrap" id="sl-prevalence"></div>
+        <div class="slider-meta"><span>0</span><span id="lbl-prevalence">0.50</span><span>1</span></div>
+      </div>
+      <div class="field">
+        <label for="f-occurrences">Occurrences</label>
+        <input type="number" id="f-occurrences" placeholder="e.g. 1" min="0" step="any">
+      </div>
+    </div>
+    <div class="grid-3" style="margin-top:10px">
+      <div class="field">
+        <label for="f-ref-abs">References (abs_days)</label>
+        <textarea id="f-ref-abs" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-ref-prev">References (prevalence)</label>
+        <textarea id="f-ref-prev" rows="2"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-ref-occ">References (occurrences)</label>
+        <textarea id="f-ref-occ" rows="2"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Section 4: Computed preview -->
+  <div class="card">
+    <h2>Computed Days Preview <span style="font-size:.75rem;font-weight:400;color:#999">(p50 × prevalence × occurrences × abs_days)</span></h2>
+    <div class="computed-grid">
+      <div class="computed-item">
+        <div class="val" id="prev-annoying">—</div>
+        <div class="lbl">days_annoying</div>
+      </div>
+      <div class="computed-item">
+        <div class="val" id="prev-hurtful">—</div>
+        <div class="lbl">days_hurtful</div>
+      </div>
+      <div class="computed-item">
+        <div class="val" id="prev-disabling">—</div>
+        <div class="lbl">days_disabling</div>
+      </div>
+      <div class="computed-item">
+        <div class="val" id="prev-excruciating">—</div>
+        <div class="lbl">days_excruciating</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div class="actions">
+    <button class="btn btn-secondary" id="btn-clear">Clear form</button>
+    <button class="btn btn-primary" id="btn-add">Add Observation</button>
+  </div>
+
+  <!-- Import CSV -->
+  <div class="card" style="margin-top:20px">
+    <h2>Import CSV</h2>
+    <p style="font-size:.82rem;color:#666;margin-bottom:12px">Load a previously exported file. Column names must match the template (typos included).</p>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:180px" class="field">
+        <label for="csv-file">Upload .csv file</label>
+        <input type="file" id="csv-file" accept=".csv" style="width:100%;padding:6px 0;border:none;background:transparent;font-size:.88rem;">
+      </div>
+      <div style="flex:2;min-width:260px" class="field">
+        <label for="csv-paste">Or paste CSV text (include header row)</label>
+        <textarea id="csv-paste" rows="4" placeholder="issue,estimate,mortality,...&#10;Leg disorders,Alice,0.05,..."></textarea>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;align-items:center;margin-top:10px;flex-wrap:wrap">
+      <label style="display:inline-flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;font-size:.88rem">
+        <input type="radio" name="import-mode" value="append" checked> Append to existing
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:5px;font-weight:400;cursor:pointer;font-size:.88rem">
+        <input type="radio" name="import-mode" value="replace"> Replace all
+      </label>
+      <button class="btn btn-primary" id="btn-import" style="margin-left:auto">Import</button>
+    </div>
+    <div id="import-msg" style="margin-top:8px;font-size:.82rem;display:none;padding:6px 10px;border-radius:4px"></div>
+  </div>
+
+  <!-- Table -->
+  <div class="card" style="margin-top:20px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <h2 style="margin:0">Observations (<span id="obs-count">0</span>)</h2>
+      <button class="btn btn-success" id="btn-download">Download CSV</button>
+    </div>
+    <div class="table-wrap">
+      <table id="obs-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Issue</th>
+            <th>Estimator</th>
+            <th>p_ann_50</th>
+            <th>p_hurt_50</th>
+            <th>p_dis_50</th>
+            <th>p_excr_50</th>
+            <th>abs_days</th>
+            <th>prevalence</th>
+            <th>occurrences</th>
+            <th>days_ann</th>
+            <th>days_hurt</th>
+            <th>days_dis</th>
+            <th>days_excr</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="obs-body">
+          <tr><td colspan="15" class="empty-msg">No observations yet.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script src="https://cdn.jsdelivr.net/npm/nouislider@15/dist/nouislider.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+// ─── Config ──────────────────────────────────────────────────────────────────
+const PAIN_LEVELS = [
+  { key: 'annoying',     label: 'Annoying',      cls: 'annoying',     color: '#2e7d32' },
+  { key: 'hurtful',      label: 'Hurtful',       cls: 'hurtful',      color: '#f57f17' },
+  { key: 'disabling',    label: 'Disabling',     cls: 'disabling',    color: '#e65100' },
+  { key: 'excruciating', label: 'Excruciating',  cls: 'excruciating', color: '#b71c1c' },
+];
+
+const STORAGE_KEY = 'wfe_observations_v1';
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let observations = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let editingIdx = null;
+const sliders  = {};   // noUiSlider instances
+const charts   = {};   // Chart.js instances
+
+// ─── Single-handle helper sliders ─────────────────────────────────────────────
+function makeSingleSlider(id, labelId, initial = 0.5) {
+  const el = document.getElementById(id);
+  noUiSlider.create(el, {
+    start: [initial],
+    range: { min: 0, max: 1 },
+    step: 0.01,
+    connect: [true, false],
+    tooltips: false,
+  });
+  el.noUiSlider.on('update', (vals) => {
+    document.getElementById(labelId).textContent = parseFloat(vals[0]).toFixed(2);
+    updateComputed();
+  });
+  return el.noUiSlider;
+}
+
+// ─── Three-handle pain sliders ────────────────────────────────────────────────
+function makePainSlider(key, color) {
+  const el = document.getElementById(`sl-pain-${key}`);
+  noUiSlider.create(el, {
+    start: [0.1, 0.3, 0.6],
+    range: { min: 0, max: 1 },
+    step: 0.01,
+    connect: true,
+    behaviour: 'drag',
+    tooltips: false,
+  });
+  el.noUiSlider.on('update', (vals) => {
+    const [p05, p50, p95] = vals.map(v => parseFloat(v));
+    document.getElementById(`lbl-${key}-05`).textContent  = p05.toFixed(2);
+    document.getElementById(`lbl-${key}-50`).textContent  = p50.toFixed(2);
+    document.getElementById(`lbl-${key}-95`).textContent  = p95.toFixed(2);
+    updateChart(key, p05, p50, p95, color);
+    updateComputed();
+  });
+  sliders[key] = el.noUiSlider;
+}
+
+// ─── Chart helpers ────────────────────────────────────────────────────────────
+function normalPDF(x, mu, sigma) {
+  if (sigma <= 0) return 0;
+  return Math.exp(-0.5 * ((x - mu) / sigma) ** 2) / (sigma * Math.sqrt(2 * Math.PI));
+}
+
+function buildChartData(p05, p50, p95, color) {
+  const sigma = ((p50 - p05) / 1.645 + (p95 - p50) / 1.645) / 2 || 0.05;
+  const mu    = p50;
+  const lo    = Math.max(0, mu - 4 * sigma);
+  const hi    = Math.min(1, mu + 4 * sigma);
+  const N     = 80;
+  const xs    = Array.from({ length: N }, (_, i) => lo + (hi - lo) * i / (N - 1));
+  const ys    = xs.map(x => normalPDF(x, mu, sigma));
+
+  const shadeXs = xs.filter(x => x >= p05 && x <= p95);
+  const shadeYs = shadeXs.map(x => normalPDF(x, mu, sigma));
+
+  return {
+    datasets: [
+      // shaded area p05–p95
+      {
+        type: 'line', data: shadeXs.map((x, i) => ({ x, y: shadeYs[i] })),
+        fill: true, backgroundColor: color + '33', borderColor: 'transparent',
+        pointRadius: 0, tension: 0.4,
+      },
+      // full curve
+      {
+        type: 'line', data: xs.map((x, i) => ({ x, y: ys[i] })),
+        fill: false, borderColor: color, borderWidth: 2,
+        pointRadius: 0, tension: 0.4,
+      },
+      // vertical lines for p05, p50, p95
+      {
+        type: 'scatter',
+        data: [p05, p50, p95].map(xv => ({ x: xv, y: 0 })),
+        pointStyle: 'line',
+        pointRadius: 20, pointBorderWidth: 1.5,
+        rotation: 90,
+        pointBorderColor: [color + '88', color, color + '88'],
+        backgroundColor: 'transparent',
+        borderColor: 'transparent',
+      },
+    ],
+  };
+}
+
+function makeChart(key, color) {
+  const ctx = document.getElementById(`chart-${key}`).getContext('2d');
+  charts[key] = new Chart(ctx, {
+    data: buildChartData(0.1, 0.3, 0.6, color),
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { type: 'linear', min: 0, max: 1, display: false },
+        y: { display: false },
+      },
+    },
+  });
+}
+
+function updateChart(key, p05, p50, p95, color) {
+  const c = charts[key];
+  if (!c) return;
+  const d = buildChartData(p05, p50, p95, color);
+  c.data.datasets[0].data = d.datasets[0].data;
+  c.data.datasets[1].data = d.datasets[1].data;
+  c.data.datasets[2].data = d.datasets[2].data;
+  c.update();
+}
+
+// ─── Build pain cards ─────────────────────────────────────────────────────────
+function buildPainCards() {
+  const grid = document.getElementById('pain-grid');
+  PAIN_LEVELS.forEach(({ key, label, cls }) => {
+    grid.innerHTML += `
+      <div class="pain-card ${cls}">
+        <h3>${label}</h3>
+        <div class="slider-wrap" id="sl-pain-${key}"></div>
+        <div class="handle-labels">
+          <span>p05: <strong id="lbl-${key}-05">0.10</strong></span>
+          <span>p50: <strong id="lbl-${key}-50">0.30</strong></span>
+          <span>p95: <strong id="lbl-${key}-95">0.60</strong></span>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="chart-${key}"></canvas>
+        </div>
+      </div>`;
+  });
+}
+
+// ─── Computed preview ─────────────────────────────────────────────────────────
+function getFormValues() {
+  const abs  = parseFloat(document.getElementById('f-abs-days').value)   || 0;
+  const prev = sliders['prevalence'] ? parseFloat(sliders['prevalence'].get()) : 0;
+  const occ  = parseFloat(document.getElementById('f-occurrences').value) || 0;
+
+  const pain = {};
+  PAIN_LEVELS.forEach(({ key }) => {
+    if (sliders[key]) {
+      const vals = sliders[key].get().map(v => parseFloat(v));
+      pain[key] = { p05: vals[0], p50: vals[1], p95: vals[2] };
+    } else {
+      pain[key] = { p05: 0.1, p50: 0.3, p95: 0.6 };
+    }
+  });
+
+  return { abs, prev, occ, pain };
+}
+
+function updateComputed() {
+  const { abs, prev, occ, pain } = getFormValues();
+  PAIN_LEVELS.forEach(({ key }) => {
+    const days = pain[key].p50 * prev * occ * abs;
+    const el   = document.getElementById(`prev-${key}`);
+    if (el) el.textContent = (abs && occ) ? days.toFixed(4) : '—';
+  });
+}
+
+// ─── Read / set form ──────────────────────────────────────────────────────────
+function getFormData() {
+  const { abs, prev, occ, pain } = getFormValues();
+  const mortality = parseFloat(sliders['mortality'].get());
+
+  return {
+    issue:       document.getElementById('f-issue').value.trim(),
+    estimate:    document.getElementById('f-estimator').value.trim(),
+    mortality,
+    slaughter_time: parseFloat(document.getElementById('f-slaughter').value) || '',
+    est_weight:  '',
+
+    p_annoying_05:    pain.annoying.p05,
+    p_annoying_50:    pain.annoying.p50,
+    p_annoying_95:    pain.annoying.p95,
+    p_hurtful_05:     pain.hurtful.p05,
+    p_hurtful_50:     pain.hurtful.p50,
+    p_hurtful_95:     pain.hurtful.p95,
+    p_disabling_05:   pain.disabling.p05,
+    p_disabling_50:   pain.disabling.p50,
+    p_disabling_95:   pain.disabling.p95,
+    p_excrutiating_05: pain.excruciating.p05,   // typo preserved
+    p_exrutiating_50:  pain.excruciating.p50,   // typo preserved
+    p_excrutiating_95: pain.excruciating.p95,   // typo preserved
+
+    abs_days:     abs,
+    prevalence:   prev,
+    occurrences:  occ,
+
+    references_abs_days:     document.getElementById('f-ref-abs').value.trim(),
+    references_prevalence:   document.getElementById('f-ref-prev').value.trim(),
+    references_occurrences:  document.getElementById('f-ref-occ').value.trim(),
+
+    days_annoying:    pain.annoying.p50    * prev * occ * abs,
+    days_hurtful:     pain.hurtful.p50     * prev * occ * abs,
+    days_disabling:   pain.disabling.p50   * prev * occ * abs,
+    'days_excruciating pain': pain.excruciating.p50 * prev * occ * abs,  // space preserved
+    adj_days: '',
+  };
+}
+
+function setFormData(obs) {
+  document.getElementById('f-issue').value       = obs.issue       || '';
+  document.getElementById('f-estimator').value   = obs.estimate    || '';
+  document.getElementById('f-slaughter').value   = obs.slaughter_time !== undefined ? obs.slaughter_time : '';
+  document.getElementById('f-abs-days').value    = obs.abs_days    || '';
+  document.getElementById('f-occurrences').value = obs.occurrences || '';
+  document.getElementById('f-ref-abs').value     = obs.references_abs_days    || '';
+  document.getElementById('f-ref-prev').value    = obs.references_prevalence  || '';
+  document.getElementById('f-ref-occ').value     = obs.references_occurrences || '';
+
+  sliders['mortality'].set(obs.mortality   ?? 0.5);
+  sliders['prevalence'].set(obs.prevalence ?? 0.5);
+
+  const painMap = {
+    annoying:     [obs.p_annoying_05,    obs.p_annoying_50,   obs.p_annoying_95],
+    hurtful:      [obs.p_hurtful_05,     obs.p_hurtful_50,    obs.p_hurtful_95],
+    disabling:    [obs.p_disabling_05,   obs.p_disabling_50,  obs.p_disabling_95],
+    excruciating: [obs.p_excrutiating_05, obs.p_exrutiating_50, obs.p_excrutiating_95],
+  };
+  PAIN_LEVELS.forEach(({ key }) => {
+    const vals = painMap[key];
+    if (vals && vals.every(v => v !== undefined)) sliders[key].set(vals);
+  });
+}
+
+function clearForm() {
+  document.getElementById('f-issue').value       = '';
+  document.getElementById('f-estimator').value   = '';
+  document.getElementById('f-slaughter').value   = '';
+  document.getElementById('f-abs-days').value    = '';
+  document.getElementById('f-occurrences').value = '';
+  document.getElementById('f-ref-abs').value     = '';
+  document.getElementById('f-ref-prev').value    = '';
+  document.getElementById('f-ref-occ').value     = '';
+  sliders['mortality'].set(0.5);
+  sliders['prevalence'].set(0.5);
+  PAIN_LEVELS.forEach(({ key }) => sliders[key].set([0.1, 0.3, 0.6]));
+  editingIdx = null;
+  document.getElementById('edit-banner').style.display = 'none';
+  document.getElementById('btn-add').textContent = 'Add Observation';
+}
+
+// ─── Table ────────────────────────────────────────────────────────────────────
+function renderTable() {
+  const tbody   = document.getElementById('obs-body');
+  document.getElementById('obs-count').textContent = observations.length;
+
+  if (observations.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="15" class="empty-msg">No observations yet.</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = observations.map((obs, i) => `
+    <tr>
+      <td>${i + 1}</td>
+      <td>${esc(obs.issue)}</td>
+      <td>${esc(obs.estimate)}</td>
+      <td>${fmt(obs.p_annoying_50)}</td>
+      <td>${fmt(obs.p_hurtful_50)}</td>
+      <td>${fmt(obs.p_disabling_50)}</td>
+      <td>${fmt(obs.p_exrutiating_50)}</td>
+      <td>${fmt(obs.abs_days)}</td>
+      <td>${fmt(obs.prevalence)}</td>
+      <td>${fmt(obs.occurrences)}</td>
+      <td>${fmt(obs.days_annoying)}</td>
+      <td>${fmt(obs.days_hurtful)}</td>
+      <td>${fmt(obs.days_disabling)}</td>
+      <td>${fmt(obs['days_excruciating pain'])}</td>
+      <td style="white-space:nowrap">
+        <button class="btn btn-edit"    onclick="editRow(${i})">Edit</button>
+        <button class="btn btn-danger"  onclick="deleteRow(${i})">Del</button>
+      </td>
+    </tr>`).join('');
+}
+
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function fmt(v) {
+  if (v === '' || v === null || v === undefined) return '—';
+  const n = parseFloat(v);
+  return isNaN(n) ? esc(String(v)) : n.toFixed(3);
+}
+
+function saveObs() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(observations));
+}
+
+function editRow(i) {
+  editingIdx = i;
+  setFormData(observations[i]);
+  document.getElementById('edit-banner').style.display = 'block';
+  document.getElementById('edit-row-num').textContent   = i + 1;
+  document.getElementById('btn-add').textContent = 'Save Changes';
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function deleteRow(i) {
+  if (!confirm(`Delete observation ${i + 1}?`)) return;
+  observations.splice(i, 1);
+  saveObs();
+  renderTable();
+}
+
+// ─── CSV download ─────────────────────────────────────────────────────────────
+const CSV_COLS = [
+  'issue', 'estimate', 'mortality', 'slaughter_time', 'est_weight',
+  'p_annoying_05', 'p_annoying_50', 'p_annoying_95',
+  'p_hurtful_05',  'p_hurtful_50',  'p_hurtful_95',
+  'p_disabling_05','p_disabling_50','p_disabling_95',
+  'p_excrutiating_05','p_exrutiating_50','p_excrutiating_95',
+  'abs_days','prevalence','occurrences',
+  'references_abs_days','references_prevalence','references_occurrences',
+  'days_annoying','days_hurtful','days_disabling','days_excruciating pain',
+  'adj_days',
+];
+
+function toCSV(rows) {
+  const escape = v => {
+    const s = String(v ?? '');
+    return (s.includes(',') || s.includes('"') || s.includes('\n'))
+      ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const header = CSV_COLS.map(escape).join(',');
+  const body   = rows.map(r => CSV_COLS.map(c => escape(r[c] ?? '')).join(',')).join('\n');
+  return header + '\n' + body;
+}
+
+function downloadCSV() {
+  if (observations.length === 0) { alert('No observations to download.'); return; }
+  const csv  = toCSV(observations);
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = 'welfare_footprint_estimates.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── CSV import ───────────────────────────────────────────────────────────────
+function parseCSV(text) {
+  // Field-by-field parser; handles quoted fields with embedded commas/newlines
+  const rows = [];
+  let fields = [], field = '', inQ = false;
+  const n = text.length;
+
+  for (let i = 0; i <= n; i++) {
+    const c = i < n ? text[i] : null;
+    if (inQ) {
+      if (c === '"') {
+        if (i + 1 < n && text[i + 1] === '"') { field += '"'; i++; }
+        else inQ = false;
+      } else if (c === null) {
+        fields.push(field); if (fields.some(f => f !== '')) rows.push(fields);
+      } else {
+        field += c;
+      }
+    } else {
+      if (c === '"') {
+        inQ = true;
+      } else if (c === ',') {
+        fields.push(field); field = '';
+      } else if (c === '\n' || c === null) {
+        fields.push(field); field = '';
+        if (fields.some(f => f !== '')) rows.push(fields);
+        fields = [];
+      } else if (c !== '\r') {
+        field += c;
+      }
+    }
+  }
+  return rows;
+}
+
+function csvToObs(rows) {
+  if (rows.length < 2) return [];
+  const headers = rows[0].map(h => h.trim());
+  const NUM_FIELDS = new Set([
+    'mortality','slaughter_time','est_weight',
+    'p_annoying_05','p_annoying_50','p_annoying_95',
+    'p_hurtful_05','p_hurtful_50','p_hurtful_95',
+    'p_disabling_05','p_disabling_50','p_disabling_95',
+    'p_excrutiating_05','p_exrutiating_50','p_excrutiating_95',
+    'abs_days','prevalence','occurrences',
+    'days_annoying','days_hurtful','days_disabling','days_excruciating pain',
+  ]);
+  return rows.slice(1).map(row => {
+    const obj = {};
+    headers.forEach((h, i) => {
+      const v = (row[i] ?? '').trim();
+      obj[h] = (NUM_FIELDS.has(h) && v !== '') ? (isNaN(+v) ? v : +v) : v;
+    });
+    return obj;
+  });
+}
+
+function showImportMsg(text, ok) {
+  const el = document.getElementById('import-msg');
+  el.textContent = text;
+  el.style.display = 'block';
+  el.style.background = ok ? '#e8f5e9' : '#ffebee';
+  el.style.color       = ok ? '#2e7d32' : '#b71c1c';
+}
+
+function doImport(csvText) {
+  const rows = parseCSV(csvText.trim());
+  if (rows.length < 2) { showImportMsg('Could not parse CSV — make sure the header row is included.', false); return; }
+  const imported = csvToObs(rows);
+  if (imported.length === 0) { showImportMsg('No data rows found.', false); return; }
+
+  const mode = document.querySelector('input[name="import-mode"]:checked').value;
+  if (mode === 'replace') {
+    if (observations.length > 0 && !confirm(`Replace all ${observations.length} existing observation(s) with ${imported.length} imported row(s)?`)) return;
+    observations = imported;
+  } else {
+    observations = observations.concat(imported);
+  }
+  saveObs();
+  renderTable();
+  document.getElementById('csv-paste').value = '';
+  document.getElementById('csv-file').value  = '';
+  showImportMsg(`Imported ${imported.length} row(s) successfully.`, true);
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  buildPainCards();
+
+  // Single-handle sliders
+  sliders['mortality']  = makeSingleSlider('sl-mortality',  'lbl-mortality',  0.5);
+  sliders['prevalence'] = makeSingleSlider('sl-prevalence', 'lbl-prevalence', 0.5);
+
+  // Pain sliders + charts
+  PAIN_LEVELS.forEach(({ key, color }) => {
+    makePainSlider(key, color);
+    makeChart(key, color);
+  });
+
+  // Add / save
+  document.getElementById('btn-add').addEventListener('click', () => {
+    const obs = getFormData();
+    if (editingIdx !== null) {
+      observations[editingIdx] = obs;
+    } else {
+      observations.push(obs);
+    }
+    saveObs();
+    renderTable();
+    clearForm();
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', clearForm);
+  document.getElementById('btn-download').addEventListener('click', downloadCSV);
+
+  // Import
+  document.getElementById('btn-import').addEventListener('click', () => {
+    const pasteText = document.getElementById('csv-paste').value.trim();
+    const fileInput = document.getElementById('csv-file');
+    if (pasteText) {
+      doImport(pasteText);
+    } else if (fileInput.files.length > 0) {
+      const reader = new FileReader();
+      reader.onload = e => doImport(e.target.result);
+      reader.readAsText(fileInput.files[0]);
+    } else {
+      showImportMsg('Paste CSV text or choose a file first.', false);
+    }
+  });
+
+  renderTable();
+  updateComputed();
+});
+</script>
+</body>
+</html>
